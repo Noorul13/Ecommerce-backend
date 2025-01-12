@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
   canPurchase: {
     type: String,
     enum: ['ALLOWED', 'DENIED', 'PENDING'], // Define your enum values
@@ -30,7 +34,10 @@ const userSchema = new mongoose.Schema({
   },
   deviceToken: String,
   deviceType: String,
-  accessToken: String
+  accessToken: String,
+  last_login: { type: Date },
+  total_login_time: { type: Number, default: 0 }, // Total login time in minutes
+  current_login_start: { type: Date }, // Start time of the current session
 });
 
 const User = mongoose.model('user', userSchema);

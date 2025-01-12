@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const adminModel = require("../models/admin");
+const userModel = require("../models/user");
 const { adminTokensModel } = require("../models/adminToken");
 const { sendOtpEmail } = require('../utils/email');
 require('dotenv').config();
@@ -177,5 +178,191 @@ module.exports.verifyOtpAndSetNewPassword = async (req, res) => {
       res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
       res.status(500).json({ message: 'Server error', details: error.message });
+    }
+};
+
+module.exports.blockUser = async (req, res) => {
+    const { userId } = req.query;
+
+    try {
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if(user.isBlocked){
+            return res.status(404).json({ message: 'User is already block' });
+        }
+
+        user.isBlocked = true;
+        user.canPurchase = "DENIED";
+        await user.save();
+
+        res.status(200).json({ message: 'User blocked successfully', user });
+    } catch (error) {
+        res.status(500).json({ message: 'Error blocking user', error: error.message });
+    }
+};
+
+module.exports.unblockUser = async (req, res) => {
+    const { userId } = req.query;
+
+    try {
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if(!user.isBlocked){
+            return res.status(404).json({ message: 'User is already unblock' });
+        }
+
+        user.isBlocked = false;
+        user.canPurchase = "ALLOWED";
+        await user.save();
+
+        res.status(200).json({ message: 'User unblocked successfully', user });
+    } catch (error) {
+        res.status(500).json({ message: 'Error unblocking user', error: error.message });
+    }
+};
+
+exports.getAllUsers = async (req, res) => {
+    try {
+        // Get pagination parameters from query, with defaults
+        const { page = 1, limit = 10, search = "" } = req.query;
+        const queryCheck = {};
+        const skip = (page - 1) * limit;
+
+
+        // Build search query
+        if (search) {
+            queryCheck.$or = [
+              { username: { $regex: search, $options: "i" } }, // Case-insensitive regex search
+              { email: { $regex: search, $options: "i" } },
+            ];
+          }
+
+        // Fetch products with search and pagination
+        const users = await userModel.find(queryCheck)
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 }); // Sort by creation date, newest first
+
+        // Get total count of matched products
+        const totalusers = await userModel.countDocuments(queryCheck);
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            data: users,
+            pagination: {
+                totalusers,
+                currentPage: page,
+                totalPages: Math.ceil(totalusers / limit),
+                hasNextPage: page * limit < totalusers,
+                hasPrevPage: page > 1,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch products",
+            error: error.message,
+        });
+    }
+};
+
+exports.getAllBlockedUsers = async (req, res) => {
+    try {
+        // Get pagination parameters from query, with defaults
+        const { page = 1, limit = 10, search = "" } = req.query;
+        const queryCheck = { isBlocked: true };
+        const skip = (page - 1) * limit;
+
+
+        // Build search query
+        if (search) {
+            queryCheck.$or = [
+              { username: { $regex: search, $options: "i" } }, // Case-insensitive regex search
+              { email: { $regex: search, $options: "i" } },
+            ];
+          }
+
+        // Fetch products with search and pagination
+        const users = await userModel.find(queryCheck)
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 }); // Sort by creation date, newest first
+
+        // Get total count of matched products
+        const totalusers = await userModel.countDocuments(queryCheck);
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            data: users,
+            pagination: {
+                totalusers,
+                currentPage: page,
+                totalPages: Math.ceil(totalusers / limit),
+                hasNextPage: page * limit < totalusers,
+                hasPrevPage: page > 1,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch products",
+            error: error.message,
+        });
+    }
+};
+
+exports.getAllUnBlockedUsers = async (req, res) => {
+    try {
+        // Get pagination parameters from query, with defaults
+        const { page = 1, limit = 10, search = "" } = req.query;
+        const queryCheck = { isBlocked: false };
+        const skip = (page - 1) * limit;
+
+
+        // Build search query
+        if (search) {
+            queryCheck.$or = [
+              { username: { $regex: search, $options: "i" } }, // Case-insensitive regex search
+              { email: { $regex: search, $options: "i" } },
+            ];
+          }
+
+        // Fetch products with search and pagination
+        const users = await userModel.find(queryCheck)
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 }); // Sort by creation date, newest first
+
+        // Get total count of matched products
+        const totalusers = await userModel.countDocuments(queryCheck);
+
+        // Send response
+        res.status(200).json({
+            success: true,
+            data: users,
+            pagination: {
+                totalusers,
+                currentPage: page,
+                totalPages: Math.ceil(totalusers / limit),
+                hasNextPage: page * limit < totalusers,
+                hasPrevPage: page > 1,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch products",
+            error: error.message,
+        });
     }
 };

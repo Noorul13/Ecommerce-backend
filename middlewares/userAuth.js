@@ -36,7 +36,7 @@ const userAuth = async (req, res, next) => {
           req.adminRole = decoded.role;
           return next();
         }
-        console.log(decoded.id);
+        // console.log(decoded.id);
         const user = await userModel.findById(decoded.id);
         // console.log(user);
         if(!user) {

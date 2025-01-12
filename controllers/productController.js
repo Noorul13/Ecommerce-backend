@@ -170,6 +170,11 @@ exports.purchaseProduct = async (req, res) => {
 
         // Find the user
         const user = await userModel.findById(userId);
+
+        if(user.isBlocked){
+            return res.status(400).json({ message: "User is blocked by the admin and product purchase is not allowed" });
+        }
+
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -211,7 +216,7 @@ exports.purchaseProduct = async (req, res) => {
                 productId: order.productId,
                 userId: order.userId,
                 quantity: order.quantity,
-                orderPrice: (product.quantity*product.price)
+                orderPrice: (quantity*product.price)
             },
             product: {
                 productId: product._id,
