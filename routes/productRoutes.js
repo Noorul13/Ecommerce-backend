@@ -16,4 +16,9 @@ router.route("/getAllProduct").get(userauth, productController.getAllProducts);
 
 router.route("/purchaseProductByuser").post(userauth, productController.purchaseProduct);
 
+// order details
+router.route("/singleOrderDetails").get(userauth, productController.getOrder);
+router.route("/getAllOrder").get(adminauth, productController.getAllOrders);
+
+
 module.exports = router;

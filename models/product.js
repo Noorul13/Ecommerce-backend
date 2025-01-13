@@ -11,8 +11,7 @@ const productSchema = mongoose.Schema({
         enum: ['medicine', 'clothes', 'electric']
     },
     quantity: {
-        type: Number,
-        default: 0
+      type:String
     },
     price: {
         type: Number,

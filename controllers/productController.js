@@ -1,6 +1,7 @@
 const productModel = require('../models/product');
 const userModel = require('../models/user');
 const orderModel = require('../models/productOrder');
+const mongoose = require('mongoose');
 
 // Controller to add a product
 exports.addProduct = async (req, res) => {
@@ -229,3 +230,186 @@ exports.purchaseProduct = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// single product details
+exports.getOrder = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const {orderId} = req.body;
+        console.log("Product Details", orderId);
+
+        const query=[
+            {
+                $match:{
+                    _id:new mongoose.Types.ObjectId(orderId),
+                    
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "productId",
+                    foreignField: "_id",
+                    pipeline:[
+                        {
+                            $project:{
+                                productName: 1, 
+                                price: 1 
+                            }
+                        }
+
+                    ],
+                    as: "productDetails",
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    pipeline:[
+                        {
+                            $project:{
+                                username: 1, 
+                                email: 1 
+                            }
+                        }
+
+                    ],
+                    as: "userDetails",
+                }
+            }
+        ]
+
+
+        // const order = await orderModel.findById(orderId)
+        //     .populate("productId") 
+        //     .populate("userId", "username email"); 
+
+        const order = await orderModel.aggregate(query)
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found."
+            });
+        }
+        // console.log(userId);
+        // console.log(order[0].userId);
+        if(userId !== String(order[0].userId)){
+            return res.status(404).json({
+                success: false,
+                message: "This is user is not authenticated for access this order"
+            });
+        }
+
+        // Send the order details in the response
+        res.status(200).json({
+            success: true,
+            data: order
+        });
+    } catch (error) {
+        // Handle any errors
+        console.error("Error fetching order details:", error);
+      
+    }
+};
+
+// Controller to get all orders
+exports.getAllOrders = async (req, res) => {
+    try {
+
+        const page =parseInt(req.query.page)|| 1
+        const limit = parseInt(req.query.limit)|| 10
+
+        const search = {};
+
+        const query = [
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    pipeline:[
+                        {
+                            $project:{
+                                username: 1, 
+                                email: 1 
+                            }
+                        }
+
+                    ],
+                    as: "userDetails"
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "productId",
+                    foreignField: "_id",
+                    pipeline:[
+                        {
+                            $project:{
+                                productName: 1, 
+                                price: 1 
+                            }
+                        }
+
+                    ],
+                    as: "productDetails"
+                },
+            },
+            {
+                $unwind: "$productDetails" 
+            },
+
+            {
+                $match:search
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $facet: {
+                   metadata:[
+                    { $count: "total" },{ $addFields: {  page } }
+                   ],
+                   data:[
+                        { $skip: (page - 1) * limit },{ $limit: limit }
+                   ]
+                }
+            }
+        ];
+
+        if (req.query.search) {
+            search.$or = [
+                { quantity: { $regex: req.query.search, $options: "i" } },
+                { "productDetails.productName": { $regex: req.query.search, $options: "i" } },
+                { "userDetails.username": { $regex: req.query.search, $options: "i" } },
+                { "userDetails.email": { $regex: req.query.search, $options: "i" } },
+            ];
+            
+        }
+        const result = await orderModel.aggregate(query);
+       
+        res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error("Error fetching order details:", error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+
+
+
+
+
+
+

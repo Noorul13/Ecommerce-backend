@@ -29,7 +29,7 @@ const adminAuth = async (req, res, next) => {
         }
         
         const admin = await adminModel.findById(decoded.id);
-        console.log(admin);
+        // console.log(admin);
 
         if(!admin) {
           return res.status(400).json({
