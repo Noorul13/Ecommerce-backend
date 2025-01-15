@@ -6,10 +6,10 @@ const mongoose = require('mongoose');
 // Controller to add a product
 exports.addProduct = async (req, res) => {
     try {
-        const { productName, productType, quantity, price } = req.body;
+        const { productName, productType, quantity, minPrice, maxPrice } = req.body;
 
         // Validate input
-        if (!productName || !productType || !price) {
+        if (!productName || !productType || !minPrice || !maxPrice) {
             return res.status(400).json({ message: "Product name, type, and cost are required." });
         }
 
@@ -18,7 +18,8 @@ exports.addProduct = async (req, res) => {
             productName,
             productType,
             quantity: quantity || 0, // Default quantity to 0 if not provided
-            price,
+            minPrice,
+            maxPrice
         });
 
         // Save to the database
@@ -158,78 +159,78 @@ exports.getAllProducts = async (req, res) => {
 };
 
 // purchase product
-exports.purchaseProduct = async (req, res) => {
-    try {
-        const userId = req.userId;
-        console.log(userId);
-        const { productId, quantity } = req.body;
+// exports.purchaseProduct = async (req, res) => {
+//     try {
+//         const userId = req.userId;
+//         console.log(userId);
+//         const { productId, quantity } = req.body;
 
-        // Validate input
-        if (!userId || !productId || !quantity || quantity <= 0) {
-            return res.status(400).json({ message: "Invalid input" });
-        }
+//         // Validate input
+//         if (!userId || !productId || !quantity || quantity <= 0) {
+//             return res.status(400).json({ message: "Invalid input" });
+//         }
 
-        // Find the user
-        const user = await userModel.findById(userId);
+//         // Find the user
+//         const user = await userModel.findById(userId);
 
-        if(user.isBlocked){
-            return res.status(400).json({ message: "User is blocked by the admin and product purchase is not allowed" });
-        }
+//         if(user.isBlocked){
+//             return res.status(400).json({ message: "User is blocked by the admin and product purchase is not allowed" });
+//         }
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+//         if (!user) {
+//             return res.status(404).json({ message: "User not found" });
+//         }
 
-        // Check if the user is allowed to purchase
-        if (user.canPurchase !== "ALLOWED") {
-            return res.status(403).json({ message: "User is not allowed to make purchases" });
-        }
+//         // Check if the user is allowed to purchase
+//         if (user.canPurchase !== "ALLOWED") {
+//             return res.status(403).json({ message: "User is not allowed to make purchases" });
+//         }
 
-        // Find the product
-        const product = await productModel.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: "Product not found" });
-        }
+//         // Find the product
+//         const product = await productModel.findById(productId);
+//         if (!product) {
+//             return res.status(404).json({ message: "Product not found" });
+//         }
 
-        // Check product quantity
-        if (product.quantity < quantity) {
-            return res.status(400).json({ message: "Insufficient product quantity" });
-        }
+//         // Check product quantity
+//         if (product.quantity < quantity) {
+//             return res.status(400).json({ message: "Insufficient product quantity" });
+//         }
 
-        // Deduct the purchased quantity from the product stock
-        product.quantity -= quantity;
-        await product.save();
+//         // Deduct the purchased quantity from the product stock
+//         product.quantity -= quantity;
+//         await product.save();
 
-        // Create an order
-        const order = new orderModel({
-            productId,
-            userId,
-            quantity
-        });
-        await order.save();
+//         // Create an order
+//         const order = new orderModel({
+//             productId,
+//             userId,
+//             quantity
+//         });
+//         await order.save();
 
-        // Respond with success
-        res.status(200).json({
-            success: true,
-            message: "Purchase successful",
-            order: {
-                orderId: order._id,
-                productId: order.productId,
-                userId: order.userId,
-                quantity: order.quantity,
-                orderPrice: (quantity*product.price)
-            },
-            product: {
-                productId: product._id,
-                productName: product.productName,
-                remainingQuantity: product.quantity
-            }
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
+//         // Respond with success
+//         res.status(200).json({
+//             success: true,
+//             message: "Purchase successful",
+//             order: {
+//                 orderId: order._id,
+//                 productId: order.productId,
+//                 userId: order.userId,
+//                 quantity: order.quantity,
+//                 orderPrice: (quantity*product.price)
+//             },
+//             product: {
+//                 productId: product._id,
+//                 productName: product.productName,
+//                 remainingQuantity: product.quantity
+//             }
+//         });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ success: false, message: error.message });
+//     }
+// };
 
 // single product details
 exports.getOrder = async (req, res) => {
@@ -287,7 +288,7 @@ exports.getOrder = async (req, res) => {
         //     .populate("userId", "username email"); 
 
         const order = await orderModel.aggregate(query)
-
+        console.log(order);
         if (!order) {
             return res.status(404).json({
                 success: false,
@@ -309,9 +310,11 @@ exports.getOrder = async (req, res) => {
             data: order
         });
     } catch (error) {
-        // Handle any errors
         console.error("Error fetching order details:", error);
-      
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 };
 
@@ -337,7 +340,6 @@ exports.getAllOrders = async (req, res) => {
                                 email: 1 
                             }
                         }
-
                     ],
                     as: "userDetails"
                 }

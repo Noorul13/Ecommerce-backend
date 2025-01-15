@@ -55,7 +55,7 @@ module.exports.adminLogin = async (req, res) => {
         if (!admin) {
             return res.status(404).json({
                 success: false,
-                message: "Admin not found.",
+                message: "Admin not found."
             });
         }
 
@@ -64,7 +64,7 @@ module.exports.adminLogin = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
-                message: "Invalid credentials.",
+                message: "Invalid credentials."
             });
         }
 

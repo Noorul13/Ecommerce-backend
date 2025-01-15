@@ -14,7 +14,7 @@ router.route("/deleteProduct").delete(adminauth, productController.deleteProduct
 router.route("/getSingleProduct").get(userauth, productController.getProduct);
 router.route("/getAllProduct").get(userauth, productController.getAllProducts);
 
-router.route("/purchaseProductByuser").post(userauth, productController.purchaseProduct);
+// router.route("/purchaseProductByuser").post(userauth, productController.purchaseProduct);
 
 // order details
 router.route("/singleOrderDetails").get(userauth, productController.getOrder);

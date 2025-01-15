@@ -11,11 +11,15 @@ const productSchema = mongoose.Schema({
         enum: ['medicine', 'clothes', 'electric']
     },
     quantity: {
-      type:String
+      type: Number
     },
-    price: {
+    minPrice: {
         type: Number,
-        required: true
+        required: true,
+    },
+    maxPrice: {
+        type: Number,
+        required: true,
     }
 },
 {

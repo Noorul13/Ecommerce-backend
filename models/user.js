@@ -26,12 +26,13 @@ const userSchema = new mongoose.Schema({
   },
   canPurchase: {
     type: String,
-    enum: ['ALLOWED', 'DENIED', 'PENDING'], // Define your enum values
-    default: 'ALLOWED', // Set a default value if needed
+    enum: ['ALLOWED', 'DENIED', 'PENDING'],
+    default: 'ALLOWED'
   },
   otp: {
     type: String
   },
+  wishlist: [mongoose.Schema.Types.ObjectId],
   deviceToken: String,
   deviceType: String,
   accessToken: String,
