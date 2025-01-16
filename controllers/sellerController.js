@@ -3,9 +3,10 @@ const productModel = require('../models/product');
 const userModel = require('../models/user');
 const priceLocationModel = require('../models/productLocationPrice');
 const orderModel = require('../models/productOrder');
-const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { default: mongoose } = require('mongoose');
+const mongoose = require('mongoose');
+const haversine = require('haversine-distance');
 
 module.exports.registerSeller = async (req, res) => {
     const { sellerName, email, password, address, location } = req.body;
@@ -98,7 +99,7 @@ module.exports.rejectedSeller = async (req, res) => {
 
 module.exports.addProductPrice = async (req, res) => {
     try {
-      const { productId, price } = req.body;
+      const { productId } = req.body;
       const sellerId = req.sellerId;
   
       const seller = await sellerModel.findById(sellerId);
@@ -110,8 +111,28 @@ module.exports.addProductPrice = async (req, res) => {
       if (!product) {
         return res.status(404).json({ message: "Product not found." });
       }
-  
-      if (price < product.minPrice || price > product.maxPrice) {
+
+      let finalPrice = 0;
+      const productCoordinates = product.location.coordinates;
+      const newLocationCoordinates = seller.location.coordinates;
+      // console.log(productCoordinates)
+      // console.log(newLocationCoordinates)
+      
+      const distanceInKm = haversine(
+        { lat: productCoordinates[1], lon: productCoordinates[0] },
+        { lat: newLocationCoordinates[1], lon: newLocationCoordinates[0] }
+      ) / 1000; // Convert meters to kilometers
+
+      if (distanceInKm > 500) {
+        finalPrice = product.maxPrice; // Use max price
+      } else if (distanceInKm <= 100) {
+        finalPrice = product.minPrice; // Use min price
+      } else {
+        const priceIncrement = (product.maxPrice - product.minPrice) * 0.2; // Increase by 20% of the price range
+        finalPrice = product.minPrice + priceIncrement;
+      }
+
+      if (finalPrice < product.minPrice || finalPrice > product.maxPrice) {
         return res.status(400).json({
           message: `Price must be between ${product.minPrice} and ${product.maxPrice}.`,
         });
@@ -129,19 +150,20 @@ module.exports.addProductPrice = async (req, res) => {
       const priceEntry = new priceLocationModel({
         productId,
         sellerId,
-        price,
+        price: finalPrice,
       });
   
       await priceEntry.save();
   
       return res.status(201).json({
+        success: true,
         message: "Price added successfully.",
         priceEntry,
       });
     } catch (error) {
       console.error("Error adding product price:", error);
       return res.status(500).json({
-        message: "Internal server error.",
+        success: false,
         error: error.message,
       });
     }

@@ -15,8 +15,8 @@ const sellerAuth = async (req, res, next) => {
         
         // Verify the token
         const decoded = jwt.verify(token, process.env.SELLER_JWT_SECRET); 
-        console.log(decoded.id);
-        console.log(decoded.role);
+        // console.log(decoded.id);
+        // console.log(decoded.role);
         if (!decoded) {
           return res.send({ code: 400, message: "Failed to authenticate token" });
         }
@@ -39,7 +39,7 @@ const sellerAuth = async (req, res, next) => {
         }
         // console.log(decoded.id);
         const seller = await sellerModel.findById(decoded.id);
-        console.log(seller);
+        // console.log(seller);
         if(!seller) {
           return res.status(400).json({
             message: "seller is not found"

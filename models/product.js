@@ -20,11 +20,23 @@ const productSchema = mongoose.Schema({
     maxPrice: {
         type: Number,
         required: true,
-    }
+    },
+    location: {
+        type: {
+          type: String,
+          enum: ['Point'],
+          required: true
+        },
+        coordinates: { 
+          type: [Number],  // [longitude, latitude]
+          required: true 
+        }
+    },
 },
 {
     timestamps: true
 });
 
+productSchema.index({ geoCoordinates: '2dsphere' });
   
 module.exports = mongoose.model('product', productSchema);

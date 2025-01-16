@@ -6,11 +6,11 @@ const mongoose = require('mongoose');
 // Controller to add a product
 exports.addProduct = async (req, res) => {
     try {
-        const { productName, productType, quantity, minPrice, maxPrice } = req.body;
+        const { productName, productType, quantity, minPrice, maxPrice, location } = req.body;
 
         // Validate input
-        if (!productName || !productType || !minPrice || !maxPrice) {
-            return res.status(400).json({ message: "Product name, type, and cost are required." });
+        if (!productName || !productType || !minPrice || !maxPrice || !location?.type || !location?.coordinates) {
+            return res.status(400).json({ message: "All field are required" });
         }
 
         // Create a new product
@@ -19,7 +19,8 @@ exports.addProduct = async (req, res) => {
             productType,
             quantity: quantity || 0, // Default quantity to 0 if not provided
             minPrice,
-            maxPrice
+            maxPrice,
+            location
         });
 
         // Save to the database
