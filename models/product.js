@@ -13,13 +13,16 @@ const productSchema = mongoose.Schema({
     quantity: {
       type: Number
     },
+    productCreatedBy: {
+        type: String,
+        default: 'admin',
+        enum: ['admin', 'seller']
+    },
     minPrice: {
-        type: Number,
-        required: true,
+        type: Number
     },
     maxPrice: {
-        type: Number,
-        required: true,
+        type: Number
     },
     location: {
         type: {

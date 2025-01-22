@@ -102,7 +102,7 @@ module.exports.changePassword = async (req, res) => {
         const admin = await adminModel.findById(adminId);
 
         if (!admin) {
-            return res.status(404).json({ message: "User not found." });
+            return res.status(404).json({ message: "Admin not found." });
         }
 
         // Check if the current password matches

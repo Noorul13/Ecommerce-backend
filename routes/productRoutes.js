@@ -8,17 +8,16 @@ const userauth = require('../middlewares/userAuth');
 router.route("/addProduct").post(adminauth, productController.addProduct);
 router.route("/updateProduct").put(adminauth, productController.updateProduct);
 router.route("/deleteProduct").delete(adminauth, productController.deleteProduct);
-// router.route("/getSingleProductByadmin").get(adminauth, productController.getProduct);
-// router.route("/getAllProductByadmin").get(adminauth, productController.getAllProducts);
 
-router.route("/getSingleProduct").get(userauth, productController.getProduct);
-router.route("/getAllProduct").get(userauth, productController.getAllProducts);
+
+router.route("/getSingleProduct").get(productController.getProduct);
+router.route("/getAllProduct").get(productController.getAllProducts);
 
 // router.route("/purchaseProductByuser").post(userauth, productController.purchaseProduct);
 
 // order details
 router.route("/singleOrderDetails").get(userauth, productController.getOrder);
-router.route("/getAllOrder").get(adminauth, productController.getAllOrders);
+router.route("/getAllOrder").get(productController.getOrdersList);
 
 
 module.exports = router;

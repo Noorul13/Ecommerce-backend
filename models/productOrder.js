@@ -13,7 +13,9 @@ const orderSchema = mongoose.Schema({
     quantity: {
         type:String
     },
-    
+    orderPrice: {
+        type: Number
+    }
 },
 {
     timestamps: true

@@ -5,6 +5,7 @@ const priceLocationModel = require('../models/productLocationPrice');
 const orderModel = require('../models/productOrder');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { sendOtpEmail } = require('../utils/email');
 const mongoose = require('mongoose');
 const haversine = require('haversine-distance');
 
@@ -62,6 +63,97 @@ module.exports.loginSeller = async (req, res) => {
         res.status(400).json({success: false, message: error.message});
     }
 }
+
+module.exports.changePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required." });
+    }
+
+    try {
+        // Find the user by ID from the authenticated user's token
+        const sellerId = req.sellerId; 
+        console.log(sellerId);
+        const seller = await sellerModel.findById(sellerId);
+
+        if (!seller) {
+            return res.status(404).json({ message: "Seller not found." });
+        }
+
+        // Check if the current password matches
+        const isMatch = await bcrypt.compare(currentPassword, seller.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Current password is incorrect." });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password
+        seller.password = hashedPassword;
+        await seller.save();
+
+        res.status(200).json({ success: true, message: "Password updated successfully." });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports.forgotPassword = async (req, res) => {
+    const { email } = req.body; // Get email from request body
+  
+    try {
+      const seller = await sellerModel.findOne({ email });
+  
+      if (!seller) {
+        return res.status(404).json({ message: 'seller not found' });
+      }
+  
+      // Generate a 4-digit OTP
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+  
+      // Send OTP to the  email
+      await sendOtpEmail(email, otp);
+  
+      seller.otp = otp; // Save OTP to the patient record or use a separate storage
+      await seller.save();
+  
+      res.status(200).json({ success: true, message: 'OTP sent to your email', otp });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports.verifyOtpAndSetNewPassword = async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+  
+    try {
+      const seller = await sellerModel.findOne({ email });
+  
+      if (!seller) {
+        return res.status(404).json({ message: 'admin not found' });
+      }
+  
+      // Check if the OTP matches
+      if (seller.otp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP' });
+      }
+      
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      // Update the password
+      seller.password = hashedPassword; // Ensure new password is hashed before saving
+      seller.otp = undefined; // delete after use
+      // admin.otp = null; // Clear OTP after use
+      await seller.save();
+  
+      res.status(200).json({ message: 'Password updated successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', details: error.message });
+    }
+};
 
 module.exports.approvedSeller = async (req, res) => {
     const { sellerId } = req.body;
@@ -293,7 +385,7 @@ exports.singleProducts = async (req, res) => {
 
 exports.purchaseProduct = async (req, res) => {
     try {
-        const {sellerId, productId, quantityPurchased } = req.body;
+        const { sellerId, productId, quantityPurchased } = req.body;
         const userId = req.userId;
 
         const user = await userModel.findById(userId);
@@ -303,7 +395,7 @@ exports.purchaseProduct = async (req, res) => {
         }
         // Find the product by productId
         const product = await productModel.findById(productId);
-        console.log(product);
+        // console.log(product);
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
@@ -345,6 +437,7 @@ exports.purchaseProduct = async (req, res) => {
         const order = new orderModel({
             productId,
             userId,
+            orderPrice: (quantityPurchased*priceSeller.price),
             quantity : quantityPurchased
         });
         await order.save();

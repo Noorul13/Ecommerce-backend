@@ -42,6 +42,9 @@ const sellerSchema = new mongoose.Schema({
         default: "pending",
         enum: ["approved", "pending", "rejected"]
     },
+    otp: {
+        type: String
+    },
     accessToken: {
         type: String
     }

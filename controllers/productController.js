@@ -9,7 +9,7 @@ exports.addProduct = async (req, res) => {
         const { productName, productType, quantity, minPrice, maxPrice, location } = req.body;
 
         // Validate input
-        if (!productName || !productType || !minPrice || !maxPrice || !location?.type || !location?.coordinates) {
+        if (!productName || !productType || !location?.type || !location?.coordinates) {
             return res.status(400).json({ message: "All field are required" });
         }
 
@@ -35,8 +35,8 @@ exports.addProduct = async (req, res) => {
 
 // update product
 exports.updateProduct = async (req, res) => {
-    const { productId } = req.query; // Get the productId from the URL parameter
-    const { productName, productType, quantity, price } = req.body; // Get the updated data from the request body
+    const { productId } = req.query;
+    const { productName, productType, quantity, price } = req.body;
 
     try {
         // Find the product by its ID and update it
@@ -57,11 +57,11 @@ exports.updateProduct = async (req, res) => {
         }
 
         // Return the updated product as a response
-        return res.status(200).json({success: true, updatedProduct});
+        return res.status(200).json({ success: true, updatedProduct });
     } catch (error) {
         // Handle any errors (e.g., invalid product ID format)
         console.error(error);
-        return res.status(500).json({success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -100,7 +100,7 @@ exports.getProduct = async (req, res) => {
         }
 
         // Return the found product as a response
-        return res.status(200).json({ success: true, message: 'fetch successfully product', product});
+        return res.status(200).json({ success: true, message: 'fetch successfully product', product });
     } catch (error) {
         // Handle any errors (e.g., invalid product ID format)
         console.error(error);
@@ -120,14 +120,14 @@ exports.getAllProducts = async (req, res) => {
         // Build search query
         if (search) {
             queryCheck.$or = [
-              { productName: { $regex: search, $options: "i" } }, // Case-insensitive regex search
-              { productType: { $regex: search, $options: "i" } },
+                { productName: { $regex: search, $options: "i" } }, // Case-insensitive regex search
+                { productType: { $regex: search, $options: "i" } },
             ];
             // If search term is numeric (like price), add a numeric filter
             if (!isNaN(search)) {
                 queryCheck.$or.push({ price: Number(search) }); // numeric price search
             }
-          }
+        }
 
         // Fetch products with search and pagination
         const products = await productModel.find(queryCheck)
@@ -237,14 +237,15 @@ exports.getAllProducts = async (req, res) => {
 exports.getOrder = async (req, res) => {
     try {
         const userId = req.userId;
-        const {orderId} = req.body;
+        console.log(userId);
+        const { orderId } = req.body;
         console.log("Product Details", orderId);
 
-        const query=[
+        const query = [
             {
-                $match:{
-                    _id:new mongoose.Types.ObjectId(orderId),
-                    
+                $match: {
+                    _id: new mongoose.Types.ObjectId(orderId),
+
                 }
             },
             {
@@ -252,11 +253,11 @@ exports.getOrder = async (req, res) => {
                     from: "products",
                     localField: "productId",
                     foreignField: "_id",
-                    pipeline:[
+                    pipeline: [
                         {
-                            $project:{
-                                productName: 1, 
-                                price: 1 
+                            $project: {
+                                productName: 1,
+                                price: 1
                             }
                         }
 
@@ -269,11 +270,11 @@ exports.getOrder = async (req, res) => {
                     from: "users",
                     localField: "userId",
                     foreignField: "_id",
-                    pipeline:[
+                    pipeline: [
                         {
-                            $project:{
-                                username: 1, 
-                                email: 1 
+                            $project: {
+                                username: 1,
+                                email: 1
                             }
                         }
 
@@ -298,7 +299,7 @@ exports.getOrder = async (req, res) => {
         }
         // console.log(userId);
         // console.log(order[0].userId);
-        if(userId !== String(order[0].userId)){
+        if (userId !== String(order[0].userId)) {
             return res.status(404).json({
                 success: false,
                 message: "This is user is not authenticated for access this order"
@@ -320,91 +321,90 @@ exports.getOrder = async (req, res) => {
 };
 
 // Controller to get all orders
-exports.getAllOrders = async (req, res) => {
+
+exports.getOrdersList = async (req, res) => {
     try {
+        const { page = 1, limit = 10, search = "" } = req.query;
 
-        const page =parseInt(req.query.page)|| 1
-        const limit = parseInt(req.query.limit)|| 10
+        const searchFilter = {};
 
-        const search = {};
+        if (search) {
+            searchFilter.$or = [
+                { quantity: { $regex: search, $options: "i" } },
+                { "productDetails.productName": { $regex: search, $options: "i" } },
+                { "userDetails.username": { $regex: search, $options: "i" } },
+                { "userDetails.email": { $regex: search, $options: "i" } },
+            ];
+        }
 
-        const query = [
+        const result = await orderModel.aggregate([
             {
                 $lookup: {
                     from: "users",
                     localField: "userId",
                     foreignField: "_id",
-                    pipeline:[
+                    pipeline: [
                         {
-                            $project:{
-                                username: 1, 
-                                email: 1 
-                            }
-                        }
+                            $project: {
+                                username: 1,
+                                email: 1,
+                            },
+                        },
                     ],
-                    as: "userDetails"
-                }
+                    as: "userDetails",
+                },
             },
             {
                 $lookup: {
                     from: "products",
                     localField: "productId",
                     foreignField: "_id",
-                    pipeline:[
+                    pipeline: [
                         {
-                            $project:{
-                                productName: 1, 
-                                price: 1 
-                            }
-                        }
-
+                            $project: {
+                                productName: 1,
+                                price: 1,
+                            },
+                        },
                     ],
-                    as: "productDetails"
+                    as: "productDetails",
                 },
             },
             {
-                $unwind: "$productDetails" 
-            },
-
-            {
-                $match:search
+                $unwind: "$productDetails",
             },
             {
-                $sort: { createdAt: -1 }
+                $unwind: "$userDetails",
+            },
+            {
+                $match: searchFilter,
+            },
+            {
+                $sort: { createdAt: -1 },
             },
             {
                 $facet: {
-                   metadata:[
-                    { $count: "total" },{ $addFields: {  page } }
-                   ],
-                   data:[
-                        { $skip: (page - 1) * limit },{ $limit: limit }
-                   ]
-                }
-            }
-        ];
+                    metadata: [
+                        { $count: "total" },
+                        { $addFields: { page: parseInt(page, 10) } },
+                    ],
+                    data: [
+                        { $skip: (parseInt(page, 10) - 1) * parseInt(limit, 10) },
+                        { $limit: parseInt(limit, 10) },
+                    ],
+                },
+            },
+        ]);
 
-        if (req.query.search) {
-            search.$or = [
-                { quantity: { $regex: req.query.search, $options: "i" } },
-                { "productDetails.productName": { $regex: req.query.search, $options: "i" } },
-                { "userDetails.username": { $regex: req.query.search, $options: "i" } },
-                { "userDetails.email": { $regex: req.query.search, $options: "i" } },
-            ];
-            
-        }
-        const result = await orderModel.aggregate(query);
-       
         res.status(200).json({
             success: true,
-            data: result
+            data: result,
         });
-
     } catch (error) {
         console.error("Error fetching order details:", error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: error.message,
         });
     }
 };
